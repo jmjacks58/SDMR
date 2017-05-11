@@ -47,10 +47,13 @@ ext2 <- extent(-1500000,300000,500000,25000000)
 ##--Create object with Lambert Azimuthal Equal Area projection (lat and long from Hijmans 
 ##--and Graham, 2007):
 crs.laea <- CRS("+proj=laea +lat_0=0 +lon_0=-80 +ellps=WGS84 +units=m +no_defs")
+#use the aeqd
+crs.aeqd <- "+proj=aeqd +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
-bioclim.vars <- list.files(path = paste(system.file(package = "dismo"),'/ex/wc0.5', sep = ''), pattern = 'bil', full.names = TRUE)
+bioclim.vars <- list.files(path=paste("~/Jason_SDM/bioclim_layers/bioclim_mosaic_tiff/"), pattern='tif', full.names=TRUE)
 bioclim.vars <- stack(bioclim.vars)
-bioclim.vars.crop <- crop(bioclim.vars, ext)
+crop_raster<-stack("~/Jason_SDM/bioclim_layers/clipping_layer/Mosaic_bio1_2311.tif")
+bioclim.vars.crop <- crop(bioclim.vars, extent(crop_raster)
 bioclim.vars.LAEA <- projectRaster(bioclim.vars.crop, crs=crs.laea)
 plot(bioclim.vars.LAEA$bio_1)
 
@@ -77,6 +80,7 @@ paleo.LGM.LAEA <- resample(paleo.LGM.LAEA, paleo.LIG.LAEA, method = "bilinear")
 
 ###### PLOT SHAPE FILES OF LAYERS ON LOCAL MACHINE.
 ## e.g. 'shape' <- readOGR(dsn= ..., layer= ...)
+
 CA <- readOGR(dsn="C:/Users/leonardo/Desktop/Maxent", layer="ac_pol", proj4string(crs.laea))
 CA2 <- spTransform(CA, CRS=crs.laea)
 bioclim.vars.CA <- mask(bioclim.vars.LAEA,CA2)
