@@ -46,8 +46,7 @@ ext2 <- extent(-1500000,300000,500000,25000000)
 
 ##--Create object with Lambert Azimuthal Equal Area projection (lat and long from Hijmans 
 ##--and Graham, 2007):
-crs.laea <- CRS("+proj=laea +lat_0=0 +lon_0=-80 +ellps=WGS84 +units=m +no_defs")
-#use the aeqd
+#use the aeqd projection
 crs.aeqd <- "+proj=aeqd +lat_0=0 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"
 
 bioclim.vars <- list.files(path=paste("~/Jason_SDM/bioclim_layers/bioclim_mosaic_tiff/"), pattern='tif', full.names=TRUE)
@@ -101,17 +100,20 @@ plot(bioclim.LIG.CA$BIO1)
 ##########################################################################################
 #                          ***  Alfaro cultratus ANALYSIS  ***                           #
 ##########################################################################################
-### I. Load species occurrences input data file:
+### I. Load species occurrences input data file: 
 sp1 <- read.table("Alfaro cultratus.txt", h=T)
 head(sp1)
 summary(sp1)
 tail(sp1)
-coordinates(sp1) <- ~lon+lat
-proj4string(sp1) <- CRS("+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
-sp1 <- spTransform(sp1, CRS=crs.laea)
+#coordinates(sp1) <- ~lon+lat
+#proj4string(sp1) <- CRS("+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
+#sp1 <- spTransform(sp1, CRS=crs.laea)
+## The files in the occurance folder have already been converted into UTM and AEQD.
 class(sp1)
 head(sp1)
 plot(sp1)
+#Convert xy data to spatial points object
+sp1<-SpatialPoints(sp1)
 
 ### II. Clip the layers and plot the occurrence points for this species:
 ##--Geographically resize/cut the map, where o = east, l = west, s = south, n = north; shape =
@@ -127,25 +129,32 @@ points(sp1$lon, sp1$lat, col='red', cex=0.75)
 
 ### III. Prepare testing and training data for MaxEnt:
 ##--Here, we divide the data points into testing and training data, based on Heuberty (1994):
-group <- kfold(sp1, k=5)
-pres_train <- sp1[group != 1, ]		## Training data
-pres_test <- sp1[group == 1, ]		## Testing data
+#group <- kfold(sp1, k=5)
+#pres_train <- sp1[group != 1, ]		## Training data
+#pres_test <- sp1[group == 1, ]		## Testing data
+###### ENMeval can handle this the testing and training points.
 
 ## Como ja feito anteriormente, para definir o tamanho da area de predicao
 ##para melhora a velocidade de processamento ext = extent(W,E,S,N)coordenadas dos vertices do retangulo
 
 ###  IV. RUN MAXENT. ### 
-system.file("java", package="dismo")
-jar <- paste(system.file(package="dismo"), "/java/maxent.jar", sep='')
-if (file.exists(jar)) {
-	mx.AC <- maxent(bioclim.vars.CA, pres_train, overwrite=TRUE, args=c("-J","-r"), 
-	path= "C:/Users/leonardo/Desktop/Maxent/modelresult/Alfaro cultratus/present")
-	## Here, -J calls Jackknife method, -r asks if you want to 'overwrite' previous/existing results files
-	plot(mx.AC, xlab="Percentage of contribution", ylab="Abiotic variable")
-}
+#system.file("java", package="dismo")
+#jar <- paste(system.file(package="dismo"), "/java/maxent.jar", sep='')
+#if (file.exists(jar)) {
+#	mx.AC <- maxent(bioclim.vars.CA, pres_train, overwrite=TRUE, args=c("-J","-r"), 
+#	path= "C:/Users/leonardo/Desktop/Maxent/modelresult/Alfaro cultratus/present")
+#	## Here, -J calls Jackknife method, -r asks if you want to 'overwrite' previous/existing results files
+#	plot(mx.AC, xlab="Percentage of contribution", ylab="Abiotic variable")
+#}
+eval1<-ENMevaluate(sp1, bioclim.vars.LAEA, bg, method = 'block', RMvalues=c(1,2), fc=c('L', 'LQ', 'LQP'))
+#where AC_sp
 
 ##--Background data points:
-bg <- randomPoints(bioclim.vars.CA, n=10000, ext=CA2, extf = 1.25)
+sp1_MCP<-raster("PATH to MCP file for species 1")
+
+bg <- randomPoints(sp1_MCP, n=10000)
+
+##### Still figuring out how to pull the below data out of the ENMeval run######
 
 if (file.exists(jar)) {
 	pvtest <- data.frame(extract(bioclim.vars.CA, pres_test))
